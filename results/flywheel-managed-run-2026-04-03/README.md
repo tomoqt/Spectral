@@ -43,3 +43,13 @@ and fails to recover several stronger paper claims under the open model:
 - `C4_multi_point_compromise = false`
 
 The CUDA-X extension completed successfully with `cupy_available = true` and produced `multipoint_extension.csv`.
+
+## Plot Set
+
+The managed-run bundle now includes:
+
+- `tradeoff_map.png`: open-only FoM versus eta trade-off map across paper cases
+- `case_metric_summary.png`: hover and airplane deltas grouped by design case
+- `paper_vs_open_deltas.png`: direct paper-versus-open comparison bars
+- `geometry_distributions.png`: baseline, hover, airplane, and compromise blade shape changes
+- `cuda_weight_sweep.png`: dense CUDA sweep objective and selected sweep versus hover weight

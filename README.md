@@ -40,6 +40,7 @@ That directory includes:
 - paper-case outputs
 - claim checks
 - the dense CUDA-X multi-point sweep
+- five plots: `tradeoff_map.png`, `case_metric_summary.png`, `paper_vs_open_deltas.png`, `geometry_distributions.png`, and `cuda_weight_sweep.png`
 - a run manifest with the exact Flywheel node, execution, lease, branch, and run commit
 
 See `PROJECT.md` for the paper-to-repo mapping and modeling boundary.

@@ -85,6 +85,11 @@ The runner writes:
 - `design_case_results.json`
 - `design_case_results.csv`
 - `paper_claim_checks.json`
+- `tradeoff_map.png`
+- `case_metric_summary.png`
+- `paper_vs_open_deltas.png`
+- `geometry_distributions.png`
+- `cuda_weight_sweep.png` when CUDA sweep data are available in the output directory
 - `multipoint_extension.csv` when the CUDA path is enabled and available
 
 ## Flywheel Mapping

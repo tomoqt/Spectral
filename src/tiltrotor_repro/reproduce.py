@@ -424,6 +424,13 @@ def write_json(path: Path, payload: object) -> None:
         json.dump(payload, handle, indent=2)
 
 
+def read_csv(path: Path) -> list[dict[str, str]]:
+    if not path.exists():
+        return []
+    with path.open("r", newline="", encoding="utf-8") as handle:
+        return list(csv.DictReader(handle))
+
+
 def plot_comparison(path: Path, rows: list[dict[str, object]]) -> None:
     labels = [row["case"] for row in rows]
     eta_open = [0.0 if row["open_delta_eta_pct"] is None else row["open_delta_eta_pct"] for row in rows]
@@ -437,6 +444,139 @@ def plot_comparison(path: Path, rows: list[dict[str, object]]) -> None:
     ax.set_ylabel("Open reproduction delta FoM [%]")
     ax.set_title("Open reproduction trade-off map for paper design cases")
     fig.tight_layout()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+
+
+def case_color(case: str) -> str:
+    if case.startswith("HM"):
+        return "#1f77b4"
+    if case.startswith("AM"):
+        return "#d62728"
+    if case.startswith("MP"):
+        return "#2ca02c"
+    return "#4c4c4c"
+
+
+def plot_case_metric_summary(path: Path, results: list[CaseResult]) -> None:
+    hover_rows = [row for row in results if row.mode == "hover"]
+    airplane_rows = [row for row in results if row.mode == "airplane"]
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5), constrained_layout=True)
+
+    hover_cases = [row.case for row in hover_rows]
+    hover_values = [0.0 if row.delta_fom_pct is None else row.delta_fom_pct for row in hover_rows]
+    hover_colors = [case_color(row.case) for row in hover_rows]
+    axes[0].bar(hover_cases, hover_values, color=hover_colors)
+    axes[0].axhline(0.0, color="black", linewidth=0.8)
+    axes[0].set_ylabel("Delta FoM [%]")
+    axes[0].set_title("Hover outcomes")
+    for label, value in zip(hover_cases, hover_values):
+        axes[0].annotate(f"{value:.2f}", (label, value), xytext=(0, 3), textcoords="offset points", ha="center")
+
+    airplane_cases = [row.case for row in airplane_rows]
+    airplane_values = [0.0 if row.delta_eta_pct is None else row.delta_eta_pct for row in airplane_rows]
+    airplane_colors = [case_color(row.case) for row in airplane_rows]
+    axes[1].bar(airplane_cases, airplane_values, color=airplane_colors)
+    axes[1].axhline(0.0, color="black", linewidth=0.8)
+    axes[1].set_ylabel("Delta eta [%]")
+    axes[1].set_title("Airplane outcomes")
+    for label, value in zip(airplane_cases, airplane_values):
+        axes[1].annotate(f"{value:.2f}", (label, value), xytext=(0, 3), textcoords="offset points", ha="center")
+
+    fig.suptitle("Open reproduction metrics by design case")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+
+
+def plot_paper_vs_open_deltas(path: Path, rows: list[dict[str, object]]) -> None:
+    hover_rows = [row for row in rows if row["paper_delta_fom_pct"] is not None]
+    airplane_rows = [row for row in rows if row["paper_delta_eta_pct"] is not None]
+
+    fig, axes = plt.subplots(1, 2, figsize=(13, 5), constrained_layout=True)
+    width = 0.36
+
+    hover_labels = [str(row["case"]) for row in hover_rows]
+    hover_x = np.arange(len(hover_labels))
+    hover_paper = [float(row["paper_delta_fom_pct"]) for row in hover_rows]
+    hover_open = [float(row["open_delta_fom_pct"]) for row in hover_rows]
+    axes[0].bar(hover_x - width / 2.0, hover_paper, width=width, label="Paper", color="#7f7f7f")
+    axes[0].bar(hover_x + width / 2.0, hover_open, width=width, label="Open", color="#1f77b4")
+    axes[0].set_xticks(hover_x, hover_labels)
+    axes[0].set_ylabel("Delta FoM [%]")
+    axes[0].set_title("Hover-family and compromise hover deltas")
+    axes[0].legend(frameon=False)
+
+    airplane_labels = [str(row["case"]) for row in airplane_rows]
+    airplane_x = np.arange(len(airplane_labels))
+    airplane_paper = [float(row["paper_delta_eta_pct"]) for row in airplane_rows]
+    airplane_open = [float(row["open_delta_eta_pct"]) for row in airplane_rows]
+    axes[1].bar(airplane_x - width / 2.0, airplane_paper, width=width, label="Paper", color="#7f7f7f")
+    axes[1].bar(airplane_x + width / 2.0, airplane_open, width=width, label="Open", color="#d62728")
+    axes[1].set_xticks(airplane_x, airplane_labels)
+    axes[1].set_ylabel("Delta eta [%]")
+    axes[1].set_title("Airplane-family and compromise cruise deltas")
+
+    fig.suptitle("Paper-reported deltas versus open reproduction deltas")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+
+
+def plot_geometry_distributions(path: Path, repro: PaperReproduction, results: list[CaseResult]) -> None:
+    selected = ["Baseline", "HM2", "HM3", "AM2", "MP3"]
+    vectors: dict[str, np.ndarray] = {"Baseline": repro.baseline_alpha.copy()}
+    for row in results:
+        if row.case not in vectors:
+            vectors[row.case] = np.asarray(row.design_vector, dtype=float)
+
+    radius = repro.model.rhat
+    fig, axes = plt.subplots(3, 1, figsize=(10, 11), sharex=True, constrained_layout=True)
+
+    for label in selected:
+        alpha = vectors.get(label)
+        if alpha is None:
+            continue
+        axes[0].plot(radius, repro.model.local_pitch_deg(alpha), label=label, linewidth=2.0)
+        axes[1].plot(radius, repro.model.chord_distribution(alpha), label=label, linewidth=2.0)
+        axes[2].plot(radius, repro.model.sweep_offset(alpha) / repro.model.C_TIP, label=label, linewidth=2.0)
+
+    axes[0].set_ylabel("Pitch distribution [deg]")
+    axes[0].set_title("Twist-driven design changes")
+    axes[1].set_ylabel("Chord [m]")
+    axes[1].set_title("Chord schedule changes")
+    axes[2].set_ylabel("Sweep offset / c_tip [-]")
+    axes[2].set_xlabel("Radius fraction r/R")
+    axes[2].set_title("Tip sweep offset changes")
+    axes[0].legend(frameon=False, ncol=3)
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(path, dpi=160)
+    plt.close(fig)
+
+
+def plot_cuda_weight_sweep(path: Path, rows: list[dict[str, object]], tip_chord: float) -> None:
+    if not rows:
+        return
+
+    sorted_rows = sorted(rows, key=lambda row: float(row["weight_hover"]))
+    weight_hover = np.asarray([float(row["weight_hover"]) for row in sorted_rows], dtype=float)
+    objective = np.asarray([float(row["objective"]) for row in sorted_rows], dtype=float)
+    alpha9 = np.asarray([float(row["alpha9_sweep"]) for row in sorted_rows], dtype=float)
+
+    fig, axes = plt.subplots(1, 2, figsize=(12, 5), constrained_layout=True)
+    axes[0].plot(weight_hover, objective, color="#2ca02c", marker="o")
+    axes[0].set_xlabel("Hover weight")
+    axes[0].set_ylabel("Weighted normalized objective")
+    axes[0].set_title("CUDA dense sweep objective by weighting")
+
+    axes[1].plot(weight_hover, alpha9 / tip_chord, color="#9467bd", marker="o")
+    axes[1].set_xlabel("Hover weight")
+    axes[1].set_ylabel("Selected sweep / c_tip [-]")
+    axes[1].set_title("CUDA dense sweep optimum sweep setting")
+
     path.parent.mkdir(parents=True, exist_ok=True)
     fig.savefig(path, dpi=160)
     plt.close(fig)
@@ -510,6 +650,9 @@ def main() -> None:
     write_csv(output_dir / "reference_vs_open.csv", ref_rows)
     write_json(output_dir / "paper_claim_checks.json", claim_checks)
     plot_comparison(output_dir / "tradeoff_map.png", ref_rows)
+    plot_case_metric_summary(output_dir / "case_metric_summary.png", results)
+    plot_paper_vs_open_deltas(output_dir / "paper_vs_open_deltas.png", ref_rows)
+    plot_geometry_distributions(output_dir / "geometry_distributions.png", repro, results)
 
     claim_graph_path = Path("paper/claims.yaml")
     if claim_graph_path.exists():
@@ -517,9 +660,15 @@ def main() -> None:
             claims = yaml.safe_load(handle)
         write_json(output_dir / "claims_graph_snapshot.json", claims)
 
+    cuda_rows: list[dict[str, object]] = []
     if args.enable_cuda_extension:
         write_json(output_dir / "cuda_extension_status.json", {"cupy_available": cupy_available()})
-        run_cuda_extension(repro, output_dir)
+        cuda_rows = run_cuda_extension(repro, output_dir)
+    elif (output_dir / "multipoint_extension.csv").exists():
+        cuda_rows = read_csv(output_dir / "multipoint_extension.csv")
+
+    if cuda_rows:
+        plot_cuda_weight_sweep(output_dir / "cuda_weight_sweep.png", cuda_rows, repro.model.C_TIP)
 
 
 if __name__ == "__main__":
