@@ -1,0 +1,120 @@
+paper:
+  title: "Tiltrotor CFD Part II: aerodynamic optimisation of tiltrotor blades"
+  citation:
+    authors:
+      - "A. Jimenez Garcia"
+      - "M. Biava"
+      - "G. N. Barakos"
+      - "K. D. Baverstock"
+      - "S. Gates"
+      - "P. Mullen"
+    venue: "The Aeronautical Journal"
+    year: 2017
+    doi: "10.1017/aer.2017.21"
+
+assumptions:
+  - id: A1
+    title: "Tiltrotor blade design is a two-regime compromise problem"
+    summary: "Hover and airplane modes impose conflicting aerodynamic requirements, especially in blade twist and tip behavior."
+  - id: A2
+    title: "Publicly reproducible geometry is sufficient for an open approximation"
+    summary: "The public XV-15 radius, chord, cutout, twist relation at r/R=0.75, and airfoil family are enough to reconstruct a low-order baseline."
+  - id: A3
+    title: "The paper's exact HMB3 plus discrete-adjoint stack is not public"
+    summary: "The open reproduction must preserve the objective structure and variables while approximating the flow model."
+
+methods:
+  - id: M1
+    title: "Ten-variable blade parameterization"
+    depends_on: [A2]
+    summary: "Seven Bernstein twist variables, two chord variables, and one sweep variable."
+  - id: M2
+    title: "Trim-at-fixed-thrust evaluation"
+    depends_on: [A1]
+    summary: "Every candidate design is compared at the baseline thrust coefficient for the selected operating condition."
+  - id: M3
+    title: "Single-point and weighted multi-point optimization"
+    depends_on: [M1, M2]
+    summary: "Single-point cases optimize one regime; multi-point cases optimize a weighted sum across hover and airplane modes."
+
+experiments:
+  - id: E-HM
+    title: "Hover single-point cases HM1 HM2 HM3"
+    kind: empirical
+    depends_on: [M1, M2, M3]
+    cases: [HM1, HM2, HM3]
+    reported_findings:
+      HM1:
+        delta_fom_pct: 3.081
+      HM2:
+        delta_fom_pct: 1.988
+      HM3:
+        delta_fom_pct: 2.046
+  - id: E-AM
+    title: "Airplane single-point cases AM1 AM2"
+    kind: empirical
+    depends_on: [M1, M2, M3]
+    cases: [AM1, AM2]
+    reported_findings:
+      AM1:
+        delta_eta_pct: 6.593
+      AM2:
+        delta_eta_pct: 8.180
+  - id: E-MP
+    title: "Weighted multi-point cases MP1 MP2 MP3"
+    kind: empirical
+    depends_on: [M1, M2, M3, E-HM, E-AM]
+    cases: [MP1, MP2, MP3]
+    reported_findings:
+      MP1:
+        delta_fom_pct: 0.645
+        delta_eta_pct: 2.197
+      MP2:
+        delta_fom_pct: 0.645
+        delta_eta_pct: 2.686
+      MP3:
+        delta_fom_pct: -0.387
+        delta_eta_pct: 4.945
+
+claims:
+  - id: C1
+    title: "Twist-only optimization improves hover FoM"
+    depends_on: [E-HM]
+    support:
+      - "HM1 and HM2 both beat the baseline in hover."
+  - id: C2
+    title: "Twist-only optimization improves airplane efficiency more strongly than hover FoM"
+    depends_on: [E-AM, E-HM]
+    support:
+      - "AM1 improves eta by 6.593% versus HM2 improving FoM by 1.988%."
+  - id: C3
+    title: "Chord and sweep matter more in airplane mode than in hover"
+    depends_on: [E-HM, E-AM]
+    support:
+      - "HM2 to HM3 adds little hover gain."
+      - "AM1 to AM2 adds a materially larger eta gain."
+  - id: C4
+    title: "Multi-point optimization yields compromise blades"
+    depends_on: [E-MP, E-HM, E-AM]
+    support:
+      - "MP cases retain some hover benefit while recovering part of the airplane gain."
+  - id: C5
+    title: "The best compromise in the paper is MP3"
+    depends_on: [E-MP]
+    support:
+      - "MP3 gives the largest eta increase among multi-point cases with only a small hover penalty."
+  - id: C6
+    title: "Adjoint-based optimization was evaluation-efficient in the original paper"
+    depends_on: [A3]
+    support:
+      - "This claim belongs to the original HMB3 workflow and is recorded but not directly reproduced by the open model."
+
+extension:
+  - id: X1
+    title: "Dense weight sweep of the hover/airplane trade-off"
+    depends_on: [E-MP]
+    summary: "Use vectorized batched evaluation to extend the reported three multi-point cases into a denser Pareto-style map."
+  - id: X2
+    title: "CUDA-X acceleration for batched multi-point design sweeps"
+    depends_on: [X1]
+    summary: "Use CuPy when available to accelerate weight and sweep-parameter sweeps without changing the model assumptions."
