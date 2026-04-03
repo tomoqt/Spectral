@@ -1,0 +1,30 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "tiltrotor-cfd-part-ii-open-reproduction"
+version = "0.1.0"
+description = "Open, low-budget reproduction of tiltrotor blade optimization experiments."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "matplotlib>=3.8",
+  "numpy>=1.26",
+  "pyyaml>=6.0",
+  "scipy>=1.12",
+]
+
+[project.optional-dependencies]
+cuda = [
+  "cupy-cuda12x>=13.0; platform_system == 'Linux'",
+]
+
+[project.scripts]
+tiltrotor-reproduce = "tiltrotor_repro.reproduce:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
