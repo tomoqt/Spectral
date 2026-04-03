@@ -450,24 +450,38 @@ def run_cuda_extension(repro: PaperReproduction, output_dir: Path) -> list[dict[
     airplane_target = repro.baseline_trimmed_metrics(repro.airplane)
 
     def hover_cost_fn(alpha9_values):
+        is_cupy = hasattr(alpha9_values, "get")
+        flat_alpha9 = alpha9_values.get().reshape(-1) if is_cupy else np.asarray(alpha9_values).reshape(-1)
         values = []
-        for alpha9 in np.asarray(alpha9_values).reshape(-1):
+        for alpha9 in flat_alpha9:
             alpha = repro.baseline_alpha.copy()
             alpha[9] = float(alpha9)
             _, _, cq, _, _ = repro.trim_collective(repro.hover_high, alpha, hover_target[1])
             values.append(cq / hover_target[2])
-        return np.asarray(values).reshape(np.asarray(alpha9_values).shape)
+        out = np.asarray(values).reshape(alpha9_values.shape)
+        if is_cupy:
+            import cupy as cp  # type: ignore
+
+            return cp.asarray(out)
+        return out
 
     def airplane_cost_fn(alpha9_values):
+        is_cupy = hasattr(alpha9_values, "get")
+        flat_alpha9 = alpha9_values.get().reshape(-1) if is_cupy else np.asarray(alpha9_values).reshape(-1)
         values = []
-        for alpha9 in np.asarray(alpha9_values).reshape(-1):
+        for alpha9 in flat_alpha9:
             alpha = repro.baseline_alpha.copy()
             alpha[7] = 0.92
             alpha[8] = 0.72
             alpha[9] = float(alpha9)
             _, _, cq, _, _ = repro.trim_collective(repro.airplane, alpha, airplane_target[1])
             values.append(cq / airplane_target[2])
-        return np.asarray(values).reshape(np.asarray(alpha9_values).shape)
+        out = np.asarray(values).reshape(alpha9_values.shape)
+        if is_cupy:
+            import cupy as cp  # type: ignore
+
+            return cp.asarray(out)
+        return out
 
     weights = np.linspace(0.05, 0.95, 19)
     sweeps = np.linspace(-0.5 * repro.model.C_TIP, 0.15 * repro.model.C_TIP, 29)
