@@ -1,0 +1,8 @@
+{
+  "C1_twist_improves_hover": true,
+  "C2_airplane_gain_exceeds_hover_gain": false,
+  "C3_chord_sweep_help_airplane_more_than_hover": false,
+  "C4_multi_point_compromise": false,
+  "C5_mp3_is_strongest_compromise": true,
+  "C6_adjoint_efficiency": "recorded_from_paper_only"
+}

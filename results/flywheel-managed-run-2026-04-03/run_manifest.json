@@ -1,0 +1,49 @@
+{
+  "paper": {
+    "title": "Tiltrotor CFD Part II: aerodynamic optimisation of tiltrotor blades",
+    "doi": "10.1017/aer.2017.21"
+  },
+  "repo": {
+    "repository": "https://github.com/tomoqt/Spectral",
+    "branch": "codex/tiltrotor-cfd-reproduction",
+    "run_commit": "db5ab17584332164467fb77121c2dbc223fbf468"
+  },
+  "flywheel": {
+    "root_node_id": "46607673-7686-50ab-a2da-c66f8cbc4b42",
+    "root_slug": "dry-hall-6882",
+    "run_node_id": "4f7a1266-4718-5c81-8db2-c200ce3eeef8",
+    "run_slug": "blue-wildflower-3129",
+    "execution_id": "93b3dc4f-4afb-4cc7-845c-e7c310e81a7a",
+    "compute_lease_id": "a339bf3a-f905-46cd-8a0c-f069cc7ee77d",
+    "provider": "modal",
+    "offer_id": "modal::modal_a10g",
+    "region": "us"
+  },
+  "environment": {
+    "gpu": "NVIDIA A10G",
+    "cuda_extension_runtime_fix": {
+      "package": "nvidia-cuda-nvrtc-cu12",
+      "cuda_path": "/root/tiltrotor-open-repro/.venv/lib/python3.11/site-packages/nvidia/cuda_nvrtc",
+      "ld_library_path_prefix": "/root/tiltrotor-open-repro/.venv/lib/python3.11/site-packages/nvidia/cuda_nvrtc/lib"
+    }
+  },
+  "commands": [
+    "python -m venv .venv",
+    "source .venv/bin/activate",
+    "pip install -e .",
+    "python -m tiltrotor_repro.reproduce --output-dir outputs/paper_cases",
+    "pip install -e .[cuda]",
+    "pip install nvidia-cuda-nvrtc-cu12",
+    "export CUDA_PATH=/root/tiltrotor-open-repro/.venv/lib/python3.11/site-packages/nvidia/cuda_nvrtc",
+    "export LD_LIBRARY_PATH=/root/tiltrotor-open-repro/.venv/lib/python3.11/site-packages/nvidia/cuda_nvrtc/lib:${LD_LIBRARY_PATH}",
+    "python -m tiltrotor_repro.reproduce --output-dir outputs/paper_cases_cuda --enable-cuda-extension"
+  ],
+  "claim_checks": {
+    "C1_twist_improves_hover": true,
+    "C2_airplane_gain_exceeds_hover_gain": false,
+    "C3_chord_sweep_help_airplane_more_than_hover": false,
+    "C4_multi_point_compromise": false,
+    "C5_mp3_is_strongest_compromise": true,
+    "C6_adjoint_efficiency": "recorded_from_paper_only"
+  }
+}
